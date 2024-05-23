@@ -5,6 +5,8 @@ import co.leapwise.expressionevaluator.dto.ExpressionRequestDTO;
 import co.leapwise.expressionevaluator.exception.ResourceNotFoundException;
 import co.leapwise.expressionevaluator.model.Expression;
 import co.leapwise.expressionevaluator.repository.ExpressionRepository;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.assertj.core.util.IterableUtil;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,13 +30,15 @@ class EvaluationServiceImplTest {
     @Autowired
     private ExpressionRepository expressionRepository;
 
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
     @BeforeEach
     void init() {
         expressionRepository.deleteAll();
     }
 
     @Test
-    void testEvaluate_False() {
+    void testEvaluate_False() throws Exception{
         String json = """
                 {
                     "customer":
@@ -53,17 +57,17 @@ class EvaluationServiceImplTest {
                     }
                   }
                 """;
-
+        JsonNode jsonNode = objectMapper.readTree(json);
         Expression expression = new Expression("Complex logical expression",
                 "(customer.firstName == \"ANN\" && customer.salary < 100) OR (customer.address != null && customer.address.city == \"New York\")");
         Long id = expressionRepository.save(expression).getId();
 
-        EvaluateRequestDTO evaluateRequestDTO = new EvaluateRequestDTO(id, json);
+        EvaluateRequestDTO evaluateRequestDTO = new EvaluateRequestDTO(id, jsonNode);
         Assertions.assertFalse(evaluationService.evaluate(evaluateRequestDTO));
     }
 
     @Test
-    void testEvaluate_True() {
+    void testEvaluate_True() throws Exception {
         String json = """
                 {
                     "customer":
@@ -82,40 +86,40 @@ class EvaluationServiceImplTest {
                     }
                   }
                 """;
-
+        JsonNode jsonNode = objectMapper.readTree(json);
         Expression expression = new Expression("Complex logical expression",
                 "(customer.firstName == \"JOHN\" && customer.salary < 100) OR (customer.address != null && customer.address.city == \"Washington\")");
         Long id = expressionRepository.save(expression).getId();
 
-        EvaluateRequestDTO evaluateRequestDTO = new EvaluateRequestDTO(id, json);
+        EvaluateRequestDTO evaluateRequestDTO = new EvaluateRequestDTO(id, jsonNode);
         Assertions.assertTrue(evaluationService.evaluate(evaluateRequestDTO));
     }
 
     @Test
-    void testEvaluate_SpelEvaluationException() {
+    void testEvaluate_SpelEvaluationException() throws Exception {
         String json = """
                 {
                     "test" : "value"
                 }""";
-
+        JsonNode jsonNode = objectMapper.readTree(json);
         Expression expression = new Expression("Complex logical expression",
                 "(customer.firstName == \"JOHN\" && customer.salary < 100) OR (customer.address != null && customer.address.city == \"Washington\")");
         Long id = expressionRepository.save(expression).getId();
 
-        EvaluateRequestDTO evaluateRequestDTO = new EvaluateRequestDTO(id, json);
+        EvaluateRequestDTO evaluateRequestDTO = new EvaluateRequestDTO(id, jsonNode);
         Assertions.assertFalse(evaluationService.evaluate(evaluateRequestDTO));
     }
 
     @Test
-    void testEvaluate_ExpressionNotFound() {
+    void testEvaluate_ExpressionNotFound() throws Exception {
 
         String json = """
                 {
                   "customer": "test"
                 }
                 """;
-
-        EvaluateRequestDTO evaluateRequestDTO = new EvaluateRequestDTO(1L, json);
+        JsonNode jsonNode = objectMapper.readTree(json);
+        EvaluateRequestDTO evaluateRequestDTO = new EvaluateRequestDTO(1L, jsonNode);
         Assertions.assertThrows(ResourceNotFoundException.class, () -> evaluationService.evaluate(evaluateRequestDTO));
     }
 }
